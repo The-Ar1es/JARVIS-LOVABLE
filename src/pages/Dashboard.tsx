@@ -1,12 +1,32 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MessageSquare, CheckSquare, FileText, Mail, Newspaper, Settings, Mic } from "lucide-react";
+import { Calendar, MessageSquare, CheckSquare, FileText, Mail, Newspaper, Settings, Mic, LogOut, User } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const features = [
     {
       icon: MessageSquare,
@@ -61,22 +81,41 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-4">
-              <Mic className="w-8 h-8 text-white" />
+        {/* Header with User Info */}
+        <div className="flex justify-between items-center mb-8">
+          <div className="text-center flex-1">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-4">
+                <Mic className="w-8 h-8 text-white" />
+              </div>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
+                Jarvis
+              </h1>
             </div>
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
-              Jarvis
-            </h1>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              Your next-generation personal AI assistant. Intelligent, proactive, and seamlessly integrated into your daily life.
+            </p>
+            <Badge variant="secondary" className="mt-4">
+              Project Zenith - Powered by Advanced LLM
+            </Badge>
           </div>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Your next-generation personal AI assistant. Intelligent, proactive, and seamlessly integrated into your daily life.
-          </p>
-          <Badge variant="secondary" className="mt-4">
-            Project Zenith - Powered by Advanced LLM
-          </Badge>
+          
+          {/* User Menu */}
+          <div className="flex items-center space-x-4">
+            <div className="text-white flex items-center space-x-2">
+              <User className="w-4 h-4" />
+              <span className="text-sm">{user?.email}</span>
+            </div>
+            <Button
+              onClick={handleSignOut}
+              variant="outline"
+              size="sm"
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         {/* Quick Actions */}
