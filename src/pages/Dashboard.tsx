@@ -1,30 +1,49 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MessageSquare, CheckSquare, FileText, Mail, Newspaper, Settings, Mic, LogOut, User } from "lucide-react";
-import { Link } from "react-router-dom";
+import { MessageSquare, Calendar, CheckSquare, FileText, Mic, Volume2, VolumeX, LogOut } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useBackgroundListener } from "@/hooks/useBackgroundListener";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Signed out",
-        description: "You have been successfully signed out.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+  const handleWakeWordDetected = (transcript: string) => {
+    console.log('Wake word detected on dashboard:', transcript);
+    
+    // Navigate to chat when wake word is detected
+    navigate('/chat');
+    
+    toast({
+      title: "Jarvis Activated",
+      description: "Redirecting to chat...",
+      duration: 2000,
+    });
+  };
+
+  const {
+    isListening: isBackgroundListening,
+    hasPermission,
+    startBackgroundListening,
+    stopBackgroundListening,
+  } = useBackgroundListener(handleWakeWordDetected);
+
+  // Auto-start background listening when dashboard loads
+  useEffect(() => {
+    if (hasPermission !== false) {
+      startBackgroundListening();
     }
+  }, []);
+
+  const handleSignOut = async () => {
+    stopBackgroundListening();
+    await signOut();
+    navigate('/auth');
   };
 
   const features = [
@@ -81,42 +100,64 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <div className="container mx-auto px-4 py-8">
-        {/* Header with User Info */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="text-center flex-1">
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-4">
-                <Mic className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
-                Jarvis
-              </h1>
-            </div>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Your next-generation personal AI assistant. Intelligent, proactive, and seamlessly integrated into your daily life.
-            </p>
-            <Badge variant="secondary" className="mt-4">
-              Project Zenith - Powered by Advanced LLM
-            </Badge>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent mb-2">
+              Welcome to Jarvis
+            </h1>
+            {user?.email && (
+              <p className="text-gray-300">Signed in as {user.email}</p>
+            )}
           </div>
-          
-          {/* User Menu */}
-          <div className="flex items-center space-x-4">
-            <div className="text-white flex items-center space-x-2">
-              <User className="w-4 h-4" />
-              <span className="text-sm">{user?.email}</span>
-            </div>
+          <div className="flex items-center space-x-3">
+            <Button
+              onClick={isBackgroundListening ? stopBackgroundListening : startBackgroundListening}
+              variant={isBackgroundListening ? "destructive" : "secondary"}
+              size="sm"
+              className="flex items-center"
+            >
+              {isBackgroundListening ? <VolumeX className="w-4 h-4 mr-2" /> : <Volume2 className="w-4 h-4 mr-2" />}
+              {isBackgroundListening ? "Stop Listening" : "Start Listening"}
+            </Button>
+            <Badge variant="secondary" className="flex items-center">
+              <div className={`w-2 h-2 rounded-full mr-2 ${isBackgroundListening ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></div>
+              {isBackgroundListening ? 'Always Listening' : 'Manual Mode'}
+            </Badge>
             <Button
               onClick={handleSignOut}
               variant="outline"
               size="sm"
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              className="text-white border-white/20 hover:bg-white/10"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
             </Button>
           </div>
         </div>
+
+        {/* Background Listening Status */}
+        {isBackgroundListening && (
+          <Card className="mb-6 bg-green-500/20 backdrop-blur-sm border-green-500/30">
+            <CardContent className="p-4">
+              <p className="text-green-300 text-center flex items-center justify-center">
+                <Volume2 className="w-5 h-5 mr-3" />
+                Jarvis is listening in the background - Say "Hey Jarvis" anywhere to activate voice commands
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Permission Warning */}
+        {hasPermission === false && (
+          <Card className="mb-6 bg-red-500/20 backdrop-blur-sm border-red-500/30">
+            <CardContent className="p-4">
+              <p className="text-red-300 text-center">
+                Microphone access required for background listening. Please refresh and allow microphone access.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">

@@ -1,12 +1,12 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Send, Mic, MicOff, ArrowLeft } from "lucide-react";
+import { Send, Mic, MicOff, ArrowLeft, Volume2, VolumeX } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useBackgroundListener } from "@/hooks/useBackgroundListener";
 
 interface Message {
   id: string;
@@ -31,6 +31,28 @@ const Chat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const handleWakeWordDetected = (transcript: string) => {
+    console.log('Wake word detected in chat:', transcript);
+    
+    // Extract the command after the wake word
+    const command = transcript.replace(/hey jarvis|jarvis|hi jarvis|hello jarvis/gi, '').trim();
+    
+    if (command) {
+      handleSendMessage(`Voice command: ${command}`);
+    } else {
+      // Just wake word, prepare for listening
+      setIsListening(true);
+      setTimeout(() => setIsListening(false), 3000);
+    }
+  };
+
+  const {
+    isListening: isBackgroundListening,
+    hasPermission,
+    startBackgroundListening,
+    stopBackgroundListening,
+  } = useBackgroundListener(handleWakeWordDetected);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -112,11 +134,45 @@ const Chat = () => {
             <ArrowLeft className="w-5 h-5 mr-2" />
             Back to Dashboard
           </Link>
-          <Badge variant="secondary" className="flex items-center">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-            Jarvis Online
-          </Badge>
+          <div className="flex items-center space-x-3">
+            <Button
+              onClick={isBackgroundListening ? stopBackgroundListening : startBackgroundListening}
+              variant={isBackgroundListening ? "destructive" : "secondary"}
+              size="sm"
+              className="flex items-center"
+            >
+              {isBackgroundListening ? <VolumeX className="w-4 h-4 mr-2" /> : <Volume2 className="w-4 h-4 mr-2" />}
+              {isBackgroundListening ? "Stop Background" : "Start Background"}
+            </Button>
+            <Badge variant="secondary" className="flex items-center">
+              <div className={`w-2 h-2 rounded-full mr-2 ${isBackgroundListening ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></div>
+              {isBackgroundListening ? 'Listening' : 'Offline'}
+            </Badge>
+          </div>
         </div>
+
+        {/* Background Listening Status */}
+        {isBackgroundListening && (
+          <Card className="mb-4 bg-green-500/20 backdrop-blur-sm border-green-500/30">
+            <CardContent className="p-3">
+              <p className="text-green-300 text-sm text-center flex items-center justify-center">
+                <Volume2 className="w-4 h-4 mr-2" />
+                Background listening active - Say "Hey Jarvis" to activate voice commands
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Permission Warning */}
+        {hasPermission === false && (
+          <Card className="mb-4 bg-red-500/20 backdrop-blur-sm border-red-500/30">
+            <CardContent className="p-3">
+              <p className="text-red-300 text-sm text-center">
+                Microphone access required for background listening. Please refresh and allow microphone access.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Chat Container */}
         <Card className="bg-white/10 backdrop-blur-sm border-white/20 h-[70vh] flex flex-col">
@@ -198,7 +254,8 @@ const Chat = () => {
         <Card className="mt-4 bg-white/5 backdrop-blur-sm border-white/10">
           <CardContent className="p-4">
             <p className="text-gray-300 text-sm text-center">
-              💡 Try voice commands like: "Hey Jarvis, schedule a meeting" or "Hey Jarvis, what's my agenda today?"
+              💡 Background listening: Say "Hey Jarvis" followed by your command. 
+              Try: "Hey Jarvis, schedule a meeting" or "Hey Jarvis, what's my agenda today?"
             </p>
           </CardContent>
         </Card>
